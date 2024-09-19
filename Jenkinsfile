@@ -3,7 +3,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'nadege713/my-spring-app:latest'
         REGISTRY_CREDENTIALS_ID = '66caee6d-a632-43d3-b8af-71b764d9211a' // Docker Hub credentials ID
-        DOCKER_HOST = 'tcp://172.31.26.63:2375' // Docker server IP and port
+        DOCKER_HOST = 'tcp://172.31.26.63:2376' // Docker server IP and port
         GIT_REPO_URL = 'https://github.com/NadegeGaju/Jenkins.git'
         GIT_BRANCH = 'main' // Change 'main' to your branch if different
         DEPLOY_ENV = 'blue' // Change to 'green' for blue-green deployment
