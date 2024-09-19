@@ -29,7 +29,7 @@ pipeline {
                     // Build the Java application using Maven
                     try {
                         echo "Building application..."
-                        sh 'mvn clean package'
+                        bat 'mvn clean package'
                     } catch (Exception e) {
                         error "Build failed: ${e.message}"
                     }
@@ -42,7 +42,7 @@ pipeline {
                     // Run tests
                     try {
                         echo "Running tests..."
-                        sh 'mvn test'
+                        bat 'mvn test'
                     } catch (Exception e) {
                         error "Tests failed: ${e.message}"
                     }
@@ -55,7 +55,7 @@ pipeline {
                     // Build Docker image
                     try {
                         echo "Building Docker image ${DOCKER_IMAGE}..."
-                        sh "docker build -t ${DOCKER_IMAGE} ."
+                        bat "docker build -t ${DOCKER_IMAGE} ."
                     } catch (Exception e) {
                         error "Docker image build failed: ${e.message}"
                     }
@@ -70,36 +70,22 @@ pipeline {
                         // Deploy Docker image using Docker remote API
                         withEnv(["DOCKER_HOST=${DOCKER_HOST}"]) {
                             withCredentials([usernamePassword(credentialsId: "${REGISTRY_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                                sh '''
-                                # Print Docker version for debugging
+                                bat '''
                                 docker --version
-                                # Login to Docker Hub
                                 echo "Logging into Docker Hub..."
-                                echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin
-                                # Push the Docker image
+                                echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
                                 echo "Pushing Docker image ${DOCKER_IMAGE}..."
                                 docker push ${DOCKER_IMAGE}
-                                # Deployment Strategy - Blue-Green Deployment
-                                if [ "${DEPLOY_ENV}" = "blue" ] || [ "${DEPLOY_ENV}" = "green" ]; then
+                                if "%DEPLOY_ENV%" == "blue" || "%DEPLOY_ENV%" == "green" (
                                     echo "Deploying using Blue-Green strategy..."
-                                    # Stop and remove the existing container in the target environment
-                                    echo "Stopping and removing existing container (if exists)..."
-                                    docker stop my_container_${DEPLOY_ENV} || true
-                                    docker rm my_container_${DEPLOY_ENV} || true
-                                    # Run the new Docker container in the target environment
-                                    echo "Running new Docker container..."
-                                    docker run -d --name my_container_${DEPLOY_ENV} ${DOCKER_IMAGE}
+                                    docker stop my_container_%DEPLOY_ENV% || true
+                                    docker rm my_container_%DEPLOY_ENV% || true
+                                    docker run -d --name my_container_%DEPLOY_ENV% ${DOCKER_IMAGE}
                                     echo "Deployment complete."
-                                elif [ "${CANARY_PERCENTAGE}" -gt 0 ]; then
+                                ) else (
                                     echo "Deploying using Canary strategy..."
-                                    # Example canary deployment steps (customize as needed)
                                     echo "Running canary deployment with ${CANARY_PERCENTAGE}%..."
-                                    # Add your canary deployment logic here
-                                    # For example, you might deploy to a subset of servers or instances
-                                    echo "Canary deployment complete."
-                                else
-                                    error "Invalid deployment strategy specified."
-                                fi
+                                )
                                 '''
                             }
                         }
@@ -112,7 +98,6 @@ pipeline {
     }
     post {
         always {
-            // Clean up workspace after the pipeline
             cleanWs()
         }
         success {
