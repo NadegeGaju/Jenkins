@@ -70,7 +70,7 @@ pipeline {
                               // Deploy Docker image using Docker remote API
                               withEnv(["DOCKER_HOST=${DOCKER_HOST}"]) {
                                   withCredentials([usernamePassword(credentialsId: "${REGISTRY_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                                      sh '''
+                                      bat '''
                                       # Print Docker version for debugging
                                       docker --version
                                       # Login to Docker Hub
