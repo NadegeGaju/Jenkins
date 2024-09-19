@@ -16,7 +16,7 @@ pipeline {
             steps {
                 // Pull the code from your GitHub repository using credentials
                 git branch: 'main',
-                    url: 'https://github.com/your-username/my-app.git',
+                    url: 'https://github.com/NadegeGaju/Jenkins.git',
                     credentialsId: 'b901875b-2c86-4658-af99-c4e2772c94bc' // Replace with your GitHub credentials ID
             }
         }
