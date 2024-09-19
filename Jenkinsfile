@@ -3,7 +3,8 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'nadege713/my-spring-app:latest'
         REGISTRY_CREDENTIALS_ID = '66caee6d-a632-43d3-b8af-71b764d9211a' // Docker Hub credentials ID
-        DOCKER_HOST = 'tcp://localhost:2375' // Docker server IP and port
+         DOCKER_HOST = 'tcp://localhost:2375'
+        DOCKER_HOST = 'npipe:////./pipe/docker_engine' // Default Docker host for Windows
         GIT_REPO_URL = 'https://github.com/NadegeGaju/Jenkins.git'
         GIT_BRANCH = 'main' // Change 'main' to your branch if different
         DEPLOY_ENV = 'blue' // Change to 'green' for blue-green deployment
@@ -62,55 +63,63 @@ pipeline {
                 }
             }
         }
-      stage('Deploy') {
-                  steps {
-                      script {
-                          try {
-                              echo "Starting Docker deployment..."
-                              // Deploy Docker image using Docker remote API
-                              withEnv(["DOCKER_HOST=${DOCKER_HOST}"]) {
-                                  withCredentials([usernamePassword(credentialsId: "${REGISTRY_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                                      bat '''
-                                      # Print Docker version for debugging
-                                      docker --version
-                                      # Login to Docker Hub
-                                      echo "Logging into Docker Hub..."
-                                      echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin
-                                      # Push the Docker image
-                                      echo "Pushing Docker image ${DOCKER_IMAGE}..."
-                                      docker push ${DOCKER_IMAGE}
-                                      # Deployment Strategy - Blue-Green Deployment
-                                      if [ "${DEPLOY_ENV}" = "blue" ] || [ "${DEPLOY_ENV}" = "green" ]; then
-                                          echo "Deploying using Blue-Green strategy..."
-                                          # Stop and remove the existing container in the target environment
-                                          echo "Stopping and removing existing container (if exists)..."
-                                          docker stop my_container_${DEPLOY_ENV} || true
-                                          docker rm my_container_${DEPLOY_ENV} || true
-                                          # Run the new Docker container in the target environment
-                                          echo "Running new Docker container..."
-                                          docker run -d --name my_container_${DEPLOY_ENV} ${DOCKER_IMAGE}
-                                          echo "Deployment complete."
-                                      elif [ "${CANARY_PERCENTAGE}" -gt 0 ]; then
-                                          echo "Deploying using Canary strategy..."
-                                          # Example canary deployment steps (customize as needed)
-                                          echo "Running canary deployment with ${CANARY_PERCENTAGE}%..."
-                                          # Add your canary deployment logic here
-                                          # For example, you might deploy to a subset of servers or instances
-                                          echo "Canary deployment complete."
-                                      else
-                                          error "Invalid deployment strategy specified."
-                                      fi
-                                      '''
-                                  }
-                              }
-                          } catch (Exception e) {
-                              error "Deployment failed: ${e.message}"
-                          }
-                      }
-                  }
-              }
-          }
-
+        stage('Deploy') {
+            steps {
+                script {
+                    try {
+                        echo "Starting Docker deployment..."
+                        // Deploy Docker image using Docker remote API
+                        withEnv(["DOCKER_HOST=${DOCKER_HOST}"]) {
+                            withCredentials([usernamePassword(credentialsId: "${REGISTRY_CREDENTIALS_ID}", usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                                bat '''
+                                REM Print Docker version for debugging
+                                docker --version
+                                REM Login to Docker Hub
+                                echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USERNAME% --password-stdin
+                                REM Push the Docker image
+                                echo Pushing Docker image %DOCKER_IMAGE%...
+                                docker push %DOCKER_IMAGE%
+                                REM Deployment Strategy - Blue-Green Deployment
+                                if "%DEPLOY_ENV%"=="blue" (
+                                    echo Deploying using Blue-Green strategy...
+                                    REM Stop and remove the existing container (if exists)
+                                    echo Stopping and removing existing container (if exists)...
+                                    docker stop my_container_%DEPLOY_ENV% || true
+                                    docker rm my_container_%DEPLOY_ENV% || true
+                                    REM Run the new Docker container in the target environment
+                                    echo Running new Docker container...
+                                    docker run -d --name my_container_%DEPLOY_ENV% %DOCKER_IMAGE%
+                                    echo Deployment complete.
+                                ) else if "%DEPLOY_ENV%"=="green" (
+                                    echo Deploying using Blue-Green strategy...
+                                    REM Stop and remove the existing container (if exists)
+                                    echo Stopping and removing existing container (if exists)...
+                                    docker stop my_container_%DEPLOY_ENV% || true
+                                    docker rm my_container_%DEPLOY_ENV% || true
+                                    REM Run the new Docker container in the target environment
+                                    echo Running new Docker container...
+                                    docker run -d --name my_container_%DEPLOY_ENV% %DOCKER_IMAGE%
+                                    echo Deployment complete.
+                                ) else if "%CANARY_PERCENTAGE%" gtr 0 (
+                                    echo Deploying using Canary strategy...
+                                    REM Example canary deployment steps (customize as needed)
+                                    echo Running canary deployment with %CANARY_PERCENTAGE%%...
+                                    REM Add your canary deployment logic here
+                                    echo Canary deployment complete.
+                                ) else (
+                                    echo Invalid deployment strategy specified.
+                                    exit /b 1
+                                )
+                                '''
+                            }
+                        }
+                    } catch (Exception e) {
+                        error "Deployment failed: ${e.message}"
+                    }
+                }
+            }
+        }
+    }
     post {
         always {
             // Clean up workspace after the pipeline
